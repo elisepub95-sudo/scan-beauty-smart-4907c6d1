@@ -11,6 +11,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { searchProductByBarcode, parseIngredients } from "@/services/openFoodFacts";
 import ProductAnalysis from "@/components/ProductAnalysis";
 import type { Tables } from "@/integrations/supabase/types";
+import { z } from "zod";
+
+const barcodeSchema = z.string()
+  .trim()
+  .min(8, { message: "Le code-barres doit contenir au moins 8 caractères" })
+  .max(20, { message: "Le code-barres ne peut pas dépasser 20 caractères" })
+  .regex(/^[0-9]+$/, { message: "Le code-barres ne peut contenir que des chiffres" });
+
+const manualEntrySchema = z.object({
+  productName: z.string()
+    .trim()
+    .min(2, { message: "Le nom du produit doit contenir au moins 2 caractères" })
+    .max(200, { message: "Le nom du produit ne peut pas dépasser 200 caractères" }),
+  brand: z.string()
+    .trim()
+    .max(100, { message: "La marque ne peut pas dépasser 100 caractères" })
+    .optional(),
+  ingredients: z.string()
+    .trim()
+    .min(5, { message: "La liste des ingrédients doit contenir au moins 5 caractères" })
+    .max(5000, { message: "La liste des ingrédients ne peut pas dépasser 5000 caractères" })
+});
 
 const Scanner = () => {
   const [scanning, setScanning] = useState(false);
@@ -56,8 +78,10 @@ const Scanner = () => {
   };
 
   const handleScanBarcode = async () => {
-    if (!barcode.trim()) {
-      toast.error("Veuillez entrer un code-barres");
+    // Validate barcode
+    const validation = barcodeSchema.safeParse(barcode);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
       return;
     }
 
