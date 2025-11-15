@@ -5,30 +5,162 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Scan, Camera, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { Scan, Camera, AlertTriangle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { searchProductByBarcode, parseIngredients } from "@/services/openFoodFacts";
+import ProductAnalysis from "@/components/ProductAnalysis";
+import type { Tables } from "@/integrations/supabase/types";
 
 const Scanner = () => {
   const [scanning, setScanning] = useState(false);
   const [productName, setProductName] = useState("");
   const [barcode, setBarcode] = useState("");
+  const [brand, setBrand] = useState("");
   const [ingredients, setIngredients] = useState("");
+  const [analyzedProduct, setAnalyzedProduct] = useState<{
+    name: string;
+    brand?: string;
+    ingredients: string[];
+    matchedIngredients: Array<{
+      ingredient: string;
+      data: Tables<"global_ingredients"> | null;
+    }>;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleScan = () => {
-    setScanning(true);
-    // Simulation de scan
-    setTimeout(() => {
-      setScanning(false);
-      toast.info("Fonctionnalité de scan en cours de développement");
-    }, 1500);
+  const analyzeIngredients = async (ingredientsList: string[]) => {
+    // Fetch global ingredients from database
+    const { data: globalIngredients, error } = await supabase
+      .from("global_ingredients")
+      .select("*");
+
+    if (error) {
+      console.error("Error fetching global ingredients:", error);
+      return ingredientsList.map(ing => ({ ingredient: ing, data: null }));
+    }
+
+    // Match ingredients with database
+    return ingredientsList.map(ingredient => {
+      const normalizedIngredient = ingredient.toLowerCase().trim();
+      const match = globalIngredients?.find(
+        gi => gi.name.toLowerCase().includes(normalizedIngredient) ||
+              normalizedIngredient.includes(gi.name.toLowerCase())
+      );
+      
+      return {
+        ingredient,
+        data: match || null
+      };
+    });
   };
 
-  const handleManualEntry = () => {
-    if (!productName || !ingredients) {
-      toast.error("Veuillez remplir tous les champs");
+  const handleScanBarcode = async () => {
+    if (!barcode.trim()) {
+      toast.error("Veuillez entrer un code-barres");
       return;
     }
-    toast.success("Produit analysé avec succès !");
+
+    setLoading(true);
+    setAnalyzedProduct(null);
+
+    try {
+      const product = await searchProductByBarcode(barcode);
+
+      if (!product || !product.product) {
+        toast.error("Produit non trouvé dans la base OpenFoodFacts");
+        setLoading(false);
+        return;
+      }
+
+      const { product: productData } = product;
+      const ingredientsList = parseIngredients(productData.ingredients_text || "");
+
+      if (ingredientsList.length === 0) {
+        toast.error("Aucun ingrédient trouvé pour ce produit");
+        setLoading(false);
+        return;
+      }
+
+      const matchedIngredients = await analyzeIngredients(ingredientsList);
+
+      // Save to database
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        await supabase.from("scanned_products").insert({
+          user_id: user.id,
+          barcode: barcode,
+          name: productData.product_name || "Produit sans nom",
+          brand: productData.brands || null,
+          category: productData.categories || null,
+          ingredients: ingredientsList
+        });
+      }
+
+      setAnalyzedProduct({
+        name: productData.product_name || "Produit sans nom",
+        brand: productData.brands,
+        ingredients: ingredientsList,
+        matchedIngredients
+      });
+
+      toast.success("Produit analysé avec succès !");
+    } catch (error) {
+      console.error("Error scanning product:", error);
+      toast.error("Erreur lors du scan du produit");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualEntry = async () => {
+    if (!productName || !ingredients) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    setLoading(true);
+    setAnalyzedProduct(null);
+
+    try {
+      const ingredientsList = parseIngredients(ingredients);
+
+      if (ingredientsList.length === 0) {
+        toast.error("Aucun ingrédient valide détecté");
+        setLoading(false);
+        return;
+      }
+
+      const matchedIngredients = await analyzeIngredients(ingredientsList);
+
+      // Save to database
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        await supabase.from("scanned_products").insert({
+          user_id: user.id,
+          barcode: barcode || null,
+          name: productName,
+          brand: brand || null,
+          ingredients: ingredientsList
+        });
+      }
+
+      setAnalyzedProduct({
+        name: productName,
+        brand: brand || undefined,
+        ingredients: ingredientsList,
+        matchedIngredients
+      });
+
+      toast.success("Produit analysé avec succès !");
+    } catch (error) {
+      console.error("Error analyzing product:", error);
+      toast.error("Erreur lors de l'analyse du produit");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const dangerLevels = [
@@ -57,26 +189,42 @@ const Scanner = () => {
           <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-primary" />
+                <Scan className="w-5 h-5 text-primary" />
                 Scanner le code-barres
               </CardTitle>
               <CardDescription>
-                Utilisez votre caméra pour scanner le code-barres du produit
+                Entrez le code-barres du produit pour rechercher dans OpenFoodFacts
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border rounded-lg gradient-subtle">
-                <Camera className="w-16 h-16 text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground mb-4">
-                  Positionnez le code-barres devant la caméra
-                </p>
-                <Button
-                  onClick={handleScan}
-                  disabled={scanning}
-                  className="gradient-primary hover:opacity-90 transition-smooth shadow-soft"
-                >
-                  {scanning ? "Scan en cours..." : "Activer la caméra"}
-                </Button>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="scanBarcode">Code-barres</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="scanBarcode"
+                    placeholder="Ex: 3600523456789"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleScanBarcode()}
+                  />
+                  <Button
+                    onClick={handleScanBarcode}
+                    disabled={loading || !barcode.trim()}
+                    className="gradient-primary hover:opacity-90 transition-smooth shadow-soft"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Recherche...
+                      </>
+                    ) : (
+                      <>
+                        <Scan className="w-4 h-4 mr-2" />
+                        Scanner
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -97,6 +245,16 @@ const Scanner = () => {
                   placeholder="Ex: Crème hydratante visage"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="brand">Marque (optionnel)</Label>
+                <Input
+                  id="brand"
+                  placeholder="Ex: L'Oréal"
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
                 />
               </div>
               
@@ -123,29 +281,49 @@ const Scanner = () => {
 
               <Button
                 onClick={handleManualEntry}
+                disabled={loading}
                 className="w-full gradient-primary hover:opacity-90 transition-smooth shadow-soft"
               >
-                Analyser le produit
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyse en cours...
+                  </>
+                ) : (
+                  "Analyser le produit"
+                )}
               </Button>
             </CardContent>
           </Card>
 
+          {/* Analysis Results */}
+          {analyzedProduct && (
+            <ProductAnalysis
+              productName={analyzedProduct.name}
+              brand={analyzedProduct.brand}
+              ingredients={analyzedProduct.ingredients}
+              matchedIngredients={analyzedProduct.matchedIngredients}
+            />
+          )}
+
           {/* Danger Levels Info */}
-          <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
-            <CardHeader>
-              <CardTitle className="text-lg">Niveaux de danger</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {dangerLevels.map((danger) => (
-                  <div key={danger.level} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${danger.color}`}></div>
-                    <span className="text-sm font-medium">{danger.label}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {!analyzedProduct && (
+            <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
+              <CardHeader>
+                <CardTitle className="text-lg">Niveaux de danger</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {dangerLevels.map((danger) => (
+                    <div key={danger.level} className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${danger.color}`}></div>
+                      <span className="text-sm font-medium">{danger.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
