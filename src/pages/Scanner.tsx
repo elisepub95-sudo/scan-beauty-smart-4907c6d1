@@ -139,11 +139,19 @@ const Scanner = () => {
   };
 
   const handleManualEntry = async () => {
-    if (!productName || !ingredients) {
-      toast.error("Veuillez remplir tous les champs obligatoires");
+    // Validate inputs
+    const validation = manualEntrySchema.safeParse({
+      productName,
+      brand: brand || undefined,
+      ingredients
+    });
+
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
       return;
     }
 
+    const validatedData = validation.data;
     setLoading(true);
     setAnalyzedProduct(null);
 
@@ -165,15 +173,15 @@ const Scanner = () => {
         await supabase.from("scanned_products").insert({
           user_id: user.id,
           barcode: barcode || null,
-          name: productName,
-          brand: brand || null,
+          name: validatedData.productName,
+          brand: validatedData.brand || null,
           ingredients: ingredientsList
         });
       }
 
       setAnalyzedProduct({
-        name: productName,
-        brand: brand || undefined,
+        name: validatedData.productName,
+        brand: validatedData.brand || undefined,
         ingredients: ingredientsList,
         matchedIngredients
       });
