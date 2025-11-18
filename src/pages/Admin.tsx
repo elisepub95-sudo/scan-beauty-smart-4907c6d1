@@ -98,7 +98,12 @@ const Admin = () => {
             {adminSections.map((section, index) => (
               <Card
                 key={index}
-                onClick={() => !section.comingSoon && index === 0 && navigate("/admin/ingredients")}
+                onClick={() => {
+                  if (!section.comingSoon) {
+                    if (index === 0) navigate("/admin/ingredients");
+                    if (index === 1) navigate("/admin/routines");
+                  }
+                }}
                 className={`shadow-medium hover:shadow-strong transition-all duration-300 ${
                   !section.comingSoon ? "hover:scale-105 cursor-pointer" : "opacity-75"
                 } border-border/50 backdrop-blur-sm bg-card/95 overflow-hidden group`}
