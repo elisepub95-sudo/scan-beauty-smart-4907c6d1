@@ -7,6 +7,7 @@ import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Scanner from "./pages/Scanner";
 import Diagnostic from "./pages/Diagnostic";
+import SkinDiagnostic from "./pages/SkinDiagnostic";
 import Routine from "./pages/Routine";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/scan" element={<Scanner />} />
           <Route path="/diagnostic" element={<Diagnostic />} />
+          <Route path="/diagnostic/peau" element={<SkinDiagnostic />} />
           <Route path="/routine" element={<Routine />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
