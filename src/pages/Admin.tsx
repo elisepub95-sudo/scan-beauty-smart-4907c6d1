@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, FlaskConical, Sparkles, ListChecks } from "lucide-react";
+import { ShieldCheck, FlaskConical, Sparkles, ListChecks, Package } from "lucide-react";
 import { toast } from "sonner";
 
 const Admin = () => {
@@ -68,6 +68,13 @@ const Admin = () => {
       comingSoon: false,
     },
     {
+      icon: Package,
+      title: "Gestion des Produits",
+      description: "Gérer les produits cosmétiques de la base globale",
+      gradient: "bg-gradient-to-br from-purple-500 to-pink-500",
+      comingSoon: false,
+    },
+    {
       icon: Sparkles,
       title: "Paramètres Diagnostics",
       description: "Configurer les questions et résultats des diagnostics",
@@ -102,6 +109,7 @@ const Admin = () => {
                   if (!section.comingSoon) {
                     if (index === 0) navigate("/admin/ingredients");
                     if (index === 1) navigate("/admin/routines");
+                    if (index === 2) navigate("/admin/products");
                   }
                 }}
                 className={`shadow-medium hover:shadow-strong transition-all duration-300 ${
