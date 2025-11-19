@@ -74,6 +74,42 @@ export type Database = {
         }
         Relationships: []
       }
+      global_products: {
+        Row: {
+          barcode: string | null
+          brand: string | null
+          category: string | null
+          created_at: string
+          id: string
+          ingredients: string[]
+          name: string
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          ingredients?: string[]
+          name: string
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          ingredients?: string[]
+          name?: string
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
