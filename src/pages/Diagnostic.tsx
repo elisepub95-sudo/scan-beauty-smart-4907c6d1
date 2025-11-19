@@ -70,6 +70,9 @@ const Diagnostic = () => {
                     variant="outline"
                     className="w-full group-hover:gradient-primary group-hover:text-primary-foreground group-hover:border-transparent transition-all"
                     disabled={diagnostic.comingSoon}
+                    onClick={() => {
+                      if (index === 0) navigate("/diagnostic/peau");
+                    }}
                   >
                     {diagnostic.comingSoon ? "Bientôt disponible" : "Commencer"}
                   </Button>
