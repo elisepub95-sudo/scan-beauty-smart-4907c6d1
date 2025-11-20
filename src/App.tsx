@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Scanner from "./pages/Scanner";
+import Search from "./pages/Search";
+import ProductDetail from "./pages/ProductDetail";
+import IngredientDetail from "./pages/IngredientDetail";
 import Diagnostic from "./pages/Diagnostic";
 import SkinDiagnostic from "./pages/SkinDiagnostic";
 import SkinDiagnosticResults from "./pages/SkinDiagnosticResults";
@@ -29,6 +32,9 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/scan" element={<Scanner />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/ingredient/:id" element={<IngredientDetail />} />
           <Route path="/diagnostic" element={<Diagnostic />} />
           <Route path="/diagnostic/peau" element={<SkinDiagnostic />} />
           <Route path="/diagnostic/peau/resultats" element={<SkinDiagnosticResults />} />

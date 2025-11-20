@@ -1,365 +1,175 @@
 import { useState } from "react";
-import Navigation from "@/components/Navigation";
+import { useNavigate } from "react-router-dom";
+import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Scan, Camera, AlertTriangle, CheckCircle2, Info, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { searchProductByBarcode, parseIngredients } from "@/services/openFoodFacts";
-import ProductAnalysis from "@/components/ProductAnalysis";
-import type { Tables } from "@/integrations/supabase/types";
-import { z } from "zod";
+import { searchProductByBarcode } from "@/services/openFoodFacts";
+import { Camera, Search, X } from "lucide-react";
+import Navigation from "@/components/Navigation";
 
-const barcodeSchema = z.string()
-  .trim()
-  .min(8, { message: "Le code-barres doit contenir au moins 8 caractères" })
-  .max(20, { message: "Le code-barres ne peut pas dépasser 20 caractères" })
-  .regex(/^[0-9]+$/, { message: "Le code-barres ne peut contenir que des chiffres" });
+export default function Scanner() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isScanning, setIsScanning] = useState(false);
+  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
 
-const manualEntrySchema = z.object({
-  productName: z.string()
-    .trim()
-    .min(2, { message: "Le nom du produit doit contenir au moins 2 caractères" })
-    .max(200, { message: "Le nom du produit ne peut pas dépasser 200 caractères" }),
-  brand: z.string()
-    .trim()
-    .max(100, { message: "La marque ne peut pas dépasser 100 caractères" })
-    .optional(),
-  ingredients: z.string()
-    .trim()
-    .min(5, { message: "La liste des ingrédients doit contenir au moins 5 caractères" })
-    .max(5000, { message: "La liste des ingrédients ne peut pas dépasser 5000 caractères" })
-});
-
-const Scanner = () => {
-  const [scanning, setScanning] = useState(false);
-  const [productName, setProductName] = useState("");
-  const [barcode, setBarcode] = useState("");
-  const [brand, setBrand] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [analyzedProduct, setAnalyzedProduct] = useState<{
-    name: string;
-    brand?: string;
-    ingredients: string[];
-    matchedIngredients: Array<{
-      ingredient: string;
-      data: Tables<"global_ingredients"> | null;
-    }>;
-  } | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const analyzeIngredients = async (ingredientsList: string[]) => {
-    // Fetch global ingredients from database
-    const { data: globalIngredients, error } = await supabase
-      .from("global_ingredients")
-      .select("*");
-
-    if (error) {
-      console.error("Error fetching global ingredients:", error);
-      return ingredientsList.map(ing => ({ ingredient: ing, data: null }));
-    }
-
-    // Match ingredients with database
-    return ingredientsList.map(ingredient => {
-      const normalizedIngredient = ingredient.toLowerCase().trim();
-      const match = globalIngredients?.find(
-        gi => gi.name.toLowerCase().includes(normalizedIngredient) ||
-              normalizedIngredient.includes(gi.name.toLowerCase())
+  const startScanner = async () => {
+    try {
+      const qrCodeScanner = new Html5Qrcode("qr-reader");
+      setHtml5QrCode(qrCodeScanner);
+      
+      await qrCodeScanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        async (decodedText) => {
+          await handleBarcodeDetected(decodedText);
+          stopScanner(qrCodeScanner);
+        },
+        () => {
+          // Erreur normale pendant le scan
+        }
       );
       
-      return {
-        ingredient,
-        data: match || null
-      };
-    });
+      setIsScanning(true);
+    } catch (err) {
+      console.error("Erreur lors du démarrage du scanner:", err);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accéder à la caméra",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleScanBarcode = async () => {
-    // Validate barcode
-    const validation = barcodeSchema.safeParse(barcode);
-    if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
-      return;
+  const stopScanner = async (scanner?: Html5Qrcode) => {
+    const scannerToStop = scanner || html5QrCode;
+    if (scannerToStop) {
+      try {
+        await scannerToStop.stop();
+        scannerToStop.clear();
+      } catch (err) {
+        console.error("Erreur lors de l'arrêt du scanner:", err);
+      }
     }
+    setIsScanning(false);
+    setHtml5QrCode(null);
+  };
 
-    setLoading(true);
-    setAnalyzedProduct(null);
-
+  const handleBarcodeDetected = async (barcode: string) => {
     try {
-      const product = await searchProductByBarcode(barcode);
+      const { data: existingProduct } = await supabase
+        .from("global_products")
+        .select("*")
+        .eq("barcode", barcode)
+        .maybeSingle();
 
-      if (!product || !product.product) {
-        toast.error("Produit non trouvé dans la base OpenFoodFacts");
-        setLoading(false);
+      if (existingProduct) {
+        navigate(`/product/${existingProduct.id}`);
+        toast({
+          title: "Produit trouvé",
+          description: existingProduct.name,
+        });
         return;
       }
 
-      const { product: productData } = product;
-      const ingredientsList = parseIngredients(productData.ingredients_text || "");
-
-      if (ingredientsList.length === 0) {
-        toast.error("Aucun ingrédient trouvé pour ce produit");
-        setLoading(false);
-        return;
-      }
-
-      const matchedIngredients = await analyzeIngredients(ingredientsList);
-
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
+      const productData = await searchProductByBarcode(barcode);
       
-      if (user) {
-        await supabase.from("scanned_products").insert({
-          user_id: user.id,
-          barcode: barcode,
-          name: productData.product_name || "Produit sans nom",
-          brand: productData.brands || null,
-          category: productData.categories || null,
-          ingredients: ingredientsList
+      if (productData && productData.product) {
+        toast({
+          title: "Produit trouvé sur OpenFoodFacts",
+          description: `${productData.product.product_name || "Produit sans nom"}`,
+        });
+        
+        toast({
+          title: "Fonctionnalité à venir",
+          description: "L'ajout de produits sera bientôt disponible",
+        });
+      } else {
+        toast({
+          title: "Produit non trouvé",
+          description: "Ce produit n'existe pas dans notre base de données",
+          variant: "destructive",
         });
       }
-
-      setAnalyzedProduct({
-        name: productData.product_name || "Produit sans nom",
-        brand: productData.brands,
-        ingredients: ingredientsList,
-        matchedIngredients
-      });
-
-      toast.success("Produit analysé avec succès !");
     } catch (error) {
-      console.error("Error scanning product:", error);
-      toast.error("Erreur lors du scan du produit");
-    } finally {
-      setLoading(false);
+      console.error("Erreur lors de la recherche du produit:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la recherche",
+        variant: "destructive",
+      });
     }
   };
-
-  const handleManualEntry = async () => {
-    // Validate inputs
-    const validation = manualEntrySchema.safeParse({
-      productName,
-      brand: brand || undefined,
-      ingredients
-    });
-
-    if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
-      return;
-    }
-
-    const validatedData = validation.data;
-    setLoading(true);
-    setAnalyzedProduct(null);
-
-    try {
-      const ingredientsList = parseIngredients(ingredients);
-
-      if (ingredientsList.length === 0) {
-        toast.error("Aucun ingrédient valide détecté");
-        setLoading(false);
-        return;
-      }
-
-      const matchedIngredients = await analyzeIngredients(ingredientsList);
-
-      // Save to database
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        await supabase.from("scanned_products").insert({
-          user_id: user.id,
-          barcode: barcode || null,
-          name: validatedData.productName,
-          brand: validatedData.brand || null,
-          ingredients: ingredientsList
-        });
-      }
-
-      setAnalyzedProduct({
-        name: validatedData.productName,
-        brand: validatedData.brand || undefined,
-        ingredients: ingredientsList,
-        matchedIngredients
-      });
-
-      toast.success("Produit analysé avec succès !");
-    } catch (error) {
-      console.error("Error analyzing product:", error);
-      toast.error("Erreur lors de l'analyse du produit");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const dangerLevels = [
-    { level: 0, label: "Sûr", color: "bg-green-500", icon: CheckCircle2 },
-    { level: 1, label: "Attention", color: "bg-yellow-500", icon: Info },
-    { level: 2, label: "Modéré", color: "bg-orange-500", icon: AlertTriangle },
-    { level: 3, label: "Élevé", color: "bg-red-500", icon: AlertTriangle },
-  ];
 
   return (
-    <div className="min-h-screen gradient-subtle pb-24 md:pt-24">
+    <div className="min-h-screen bg-background pb-20">
       <Navigation />
       
-      <div className="container mx-auto px-4 pt-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4 shadow-medium">
-              <Scan className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Scanner un produit</h1>
-            <p className="text-muted-foreground">Analysez les ingrédients de vos cosmétiques</p>
-          </div>
+      <main className="container mx-auto px-4 py-8 max-w-4xl mt-20">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Scanner de Produits</h1>
+          <p className="text-muted-foreground">
+            Scannez le code-barres d'un produit cosmétique pour analyser ses ingrédients
+          </p>
+        </div>
 
-          {/* Scanner Card */}
-          <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
+        <div className="grid gap-6">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Scan className="w-5 h-5 text-primary" />
-                Scanner le code-barres
+                <Camera className="h-5 w-5" />
+                Scanner avec la caméra
               </CardTitle>
               <CardDescription>
-                Entrez le code-barres du produit pour rechercher dans OpenFoodFacts
+                Utilisez votre caméra pour scanner un code-barres
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="scanBarcode">Code-barres</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="scanBarcode"
-                    placeholder="Ex: 3600523456789"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleScanBarcode()}
-                  />
-                  <Button
-                    onClick={handleScanBarcode}
-                    disabled={loading || !barcode.trim()}
-                    className="gradient-primary hover:opacity-90 transition-smooth shadow-soft"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Recherche...
-                      </>
-                    ) : (
-                      <>
-                        <Scan className="w-4 h-4 mr-2" />
-                        Scanner
-                      </>
-                    )}
+              <div id="qr-reader" className={`${isScanning ? 'block' : 'hidden'} w-full`}></div>
+              
+              <div className="flex gap-2">
+                {!isScanning ? (
+                  <Button onClick={startScanner} className="w-full">
+                    <Camera className="mr-2 h-4 w-4" />
+                    Démarrer le scanner
                   </Button>
-                </div>
+                ) : (
+                  <Button onClick={() => stopScanner()} variant="destructive" className="w-full">
+                    <X className="mr-2 h-4 w-4" />
+                    Arrêter le scanner
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Manual Entry Card */}
-          <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
+          <Card>
             <CardHeader>
-              <CardTitle>Saisie manuelle</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Recherche
+              </CardTitle>
               <CardDescription>
-                Ou entrez les informations du produit manuellement
+                Recherchez un produit ou un ingrédient
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="productName">Nom du produit *</Label>
-                <Input
-                  id="productName"
-                  placeholder="Ex: Crème hydratante visage"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="brand">Marque (optionnel)</Label>
-                <Input
-                  id="brand"
-                  placeholder="Ex: L'Oréal"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="barcode">Code-barres (optionnel)</Label>
-                <Input
-                  id="barcode"
-                  placeholder="Ex: 3600523456789"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ingredients">Liste des ingrédients *</Label>
-                <textarea
-                  id="ingredients"
-                  className="w-full min-h-32 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="Ex: Aqua, Glycerin, Cetearyl Alcohol..."
-                  value={ingredients}
-                  onChange={(e) => setIngredients(e.target.value)}
-                />
-              </div>
-
-              <Button
-                onClick={handleManualEntry}
-                disabled={loading}
-                className="w-full gradient-primary hover:opacity-90 transition-smooth shadow-soft"
+            <CardContent>
+              <Button 
+                onClick={() => navigate('/search')} 
+                variant="outline" 
+                className="w-full"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Analyse en cours...
-                  </>
-                ) : (
-                  "Analyser le produit"
-                )}
+                Ouvrir la recherche
               </Button>
             </CardContent>
           </Card>
-
-          {/* Analysis Results */}
-          {analyzedProduct && (
-            <ProductAnalysis
-              productName={analyzedProduct.name}
-              brand={analyzedProduct.brand}
-              ingredients={analyzedProduct.ingredients}
-              matchedIngredients={analyzedProduct.matchedIngredients}
-            />
-          )}
-
-          {/* Danger Levels Info */}
-          {!analyzedProduct && (
-            <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
-              <CardHeader>
-                <CardTitle className="text-lg">Niveaux de danger</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {dangerLevels.map((danger) => (
-                    <div key={danger.level} className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${danger.color}`}></div>
-                      <span className="text-sm font-medium">{danger.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
-      </div>
+      </main>
     </div>
   );
-};
-
-export default Scanner;
+}

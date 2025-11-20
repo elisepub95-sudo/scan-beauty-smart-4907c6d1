@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Home, Scan, Stethoscope, Sparkles, User, ShieldCheck, LogOut } from "lucide-react";
+import { Home, Scan, Stethoscope, Sparkles, User, ShieldCheck, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
@@ -42,6 +42,7 @@ const Navigation = () => {
   const navItems = [
     { path: "/", icon: Home, label: "Accueil" },
     { path: "/scan", icon: Scan, label: "Scanner" },
+    { path: "/search", icon: Search, label: "Recherche" },
     { path: "/diagnostic", icon: Stethoscope, label: "Diagnostic" },
     { path: "/routine", icon: Sparkles, label: "Routine" },
     { path: "/profile", icon: User, label: "Profil" },
