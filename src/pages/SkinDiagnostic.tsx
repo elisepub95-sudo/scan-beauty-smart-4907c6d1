@@ -140,8 +140,8 @@ const SkinDiagnostic = () => {
 
       if (error) throw error;
 
-      toast.success("Diagnostic enregistré avec succès !");
-      navigate("/diagnostic");
+        toast.success("Diagnostic enregistré avec succès !");
+        navigate("/diagnostic/peau/resultats");
     } catch (error) {
       console.error("Error saving diagnostic:", error);
       toast.error("Erreur lors de l'enregistrement du diagnostic");
