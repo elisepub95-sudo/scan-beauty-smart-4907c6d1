@@ -46,30 +46,36 @@ export type Database = {
       }
       global_ingredients: {
         Row: {
+          avoid_for: string[] | null
           category: string | null
           created_at: string | null
           danger_level: Database["public"]["Enums"]["danger_level"] | null
           description: string | null
           id: string
           name: string
+          suitable_for: string[] | null
           updated_at: string | null
         }
         Insert: {
+          avoid_for?: string[] | null
           category?: string | null
           created_at?: string | null
           danger_level?: Database["public"]["Enums"]["danger_level"] | null
           description?: string | null
           id?: string
           name: string
+          suitable_for?: string[] | null
           updated_at?: string | null
         }
         Update: {
+          avoid_for?: string[] | null
           category?: string | null
           created_at?: string | null
           danger_level?: Database["public"]["Enums"]["danger_level"] | null
           description?: string | null
           id?: string
           name?: string
+          suitable_for?: string[] | null
           updated_at?: string | null
         }
         Relationships: []
@@ -229,6 +235,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_product_risk_level: {
+        Args: { product_ingredients: string[] }
+        Returns: Database["public"]["Enums"]["danger_level"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
