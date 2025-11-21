@@ -76,6 +76,7 @@ export default function Scanner() {
 
   const handleBarcodeDetected = async (barcode: string) => {
     try {
+      // 1. Chercher dans notre base de données
       const { data: existingProduct } = await supabase
         .from("global_products")
         .select("*")
@@ -83,32 +84,47 @@ export default function Scanner() {
         .maybeSingle();
 
       if (existingProduct) {
-        navigate(`/product/${existingProduct.id}`);
+        // Produit trouvé dans notre base → redirection immédiate
         toast({
-          title: "Produit trouvé",
+          title: "✅ Produit trouvé !",
           description: existingProduct.name,
         });
+        navigate(`/product/${existingProduct.id}`);
         return;
       }
 
+      // 2. Chercher sur OpenFoodFacts
       const productData = await searchProductByBarcode(barcode);
       
       if (productData && productData.product) {
-        toast({
-          title: "Produit trouvé sur OpenFoodFacts",
-          description: `${productData.product.product_name || "Produit sans nom"}`,
-        });
+        // Produit trouvé sur OpenFoodFacts → proposer de l'ajouter
+        const product = productData.product;
+        const ingredients = product.ingredients_text || "";
         
         toast({
-          title: "Fonctionnalité à venir",
-          description: "L'ajout de produits sera bientôt disponible",
+          title: "📦 Produit trouvé sur OpenFoodFacts",
+          description: "Voulez-vous l'ajouter à votre base ?",
         });
+
+        // Redirection vers la page d'ajout avec les données pré-remplies
+        const params = new URLSearchParams({
+          barcode,
+          name: product.product_name || "Produit sans nom",
+          brand: product.brands || "",
+          ingredients: ingredients,
+        });
+        
+        navigate(`/add-product?${params.toString()}`);
       } else {
+        // 3. Produit non trouvé nulle part → proposer d'ajouter manuellement
         toast({
-          title: "Produit non trouvé",
-          description: "Ce produit n'existe pas dans notre base de données",
+          title: "❌ Produit introuvable",
+          description: "Ce produit n'existe pas dans nos bases de données",
           variant: "destructive",
         });
+
+        // Redirection vers la page d'ajout avec juste le code-barres
+        navigate(`/add-product?barcode=${barcode}`);
       }
     } catch (error) {
       console.error("Erreur lors de la recherche du produit:", error);
