@@ -130,7 +130,25 @@ export default function Scanner() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div id="qr-reader" className={`${isScanning ? 'block' : 'hidden'} w-full`}></div>
+              {isScanning && (
+                <div className="relative w-full aspect-square max-w-md mx-auto bg-muted rounded-lg overflow-hidden">
+                  <div id="qr-reader" className="w-full h-full"></div>
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-4 border-2 border-primary rounded-lg"></div>
+                  </div>
+                </div>
+              )}
+              
+              {!isScanning && (
+                <div className="relative w-full aspect-square max-w-md mx-auto bg-muted/50 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+                  <div className="text-center p-6">
+                    <Camera className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">
+                      Cliquez sur le bouton ci-dessous pour activer la caméra
+                    </p>
+                  </div>
+                </div>
+              )}
               
               <div className="flex gap-2">
                 {!isScanning ? (
