@@ -84,6 +84,18 @@ export default function Scanner() {
         .maybeSingle();
 
       if (existingProduct) {
+        // Enregistrer le scan dans l'historique
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("scan_history").insert({
+            user_id: user.id,
+            product_id: existingProduct.id,
+            product_name: existingProduct.name,
+            product_brand: existingProduct.brand,
+            barcode: barcode,
+          });
+        }
+
         // Produit trouvé dans notre base → redirection immédiate
         toast({
           title: "✅ Produit trouvé !",
@@ -223,13 +235,20 @@ export default function Scanner() {
                 Recherchez un produit ou un ingrédient
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <Button 
                 onClick={() => navigate('/search')} 
                 variant="outline" 
                 className="w-full"
               >
                 Ouvrir la recherche
+              </Button>
+              <Button 
+                onClick={() => navigate('/scan/history')} 
+                variant="outline" 
+                className="w-full"
+              >
+                Voir l'historique des scans
               </Button>
             </CardContent>
           </Card>
