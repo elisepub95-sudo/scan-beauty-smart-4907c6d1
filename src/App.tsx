@@ -7,6 +7,7 @@ import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Scanner from "./pages/Scanner";
 import Search from "./pages/Search";
+import AddProduct from "./pages/AddProduct";
 import ProductDetail from "./pages/ProductDetail";
 import IngredientDetail from "./pages/IngredientDetail";
 import Diagnostic from "./pages/Diagnostic";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/scan" element={<Scanner />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/add-product" element={<AddProduct />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/ingredient/:id" element={<IngredientDetail />} />
           <Route path="/diagnostic" element={<Diagnostic />} />
