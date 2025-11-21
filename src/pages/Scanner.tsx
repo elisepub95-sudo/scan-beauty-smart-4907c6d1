@@ -1,18 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarcodeScanner } from "@capacitor-community/barcode-scanner";
+import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { searchProductByBarcode } from "@/services/openFoodFacts";
-import { Camera, Search, X } from "lucide-react";
+import { Camera, Search, X, Smartphone, AlertCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 
 export default function Scanner() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isScanning, setIsScanning] = useState(false);
+  const [isNativePlatform, setIsNativePlatform] = useState(false);
+
+  useEffect(() => {
+    // Vérifier si on est sur une plateforme native (iOS ou Android)
+    const platform = Capacitor.getPlatform();
+    setIsNativePlatform(platform === 'ios' || platform === 'android');
+  }, []);
 
   const checkPermission = async () => {
     const status = await BarcodeScanner.checkPermission({ force: true });
@@ -123,6 +132,28 @@ export default function Scanner() {
           </p>
         </div>
 
+        {!isNativePlatform && (
+          <Alert className="mb-6 border-primary/50 bg-primary/5">
+            <Smartphone className="h-4 w-4" />
+            <AlertTitle>Application mobile requise</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>Le scanner de code-barres nécessite une application mobile native.</p>
+              <p className="text-sm">
+                Pour utiliser cette fonctionnalité :
+              </p>
+              <ol className="text-sm list-decimal list-inside space-y-1 ml-2">
+                <li>Exportez le projet vers GitHub</li>
+                <li>Clonez le projet sur votre ordinateur</li>
+                <li>Installez les dépendances avec <code className="bg-muted px-1 rounded">npm install</code></li>
+                <li>Ajoutez la plateforme : <code className="bg-muted px-1 rounded">npx cap add android</code> ou <code className="bg-muted px-1 rounded">npx cap add ios</code></li>
+                <li>Compilez : <code className="bg-muted px-1 rounded">npm run build</code></li>
+                <li>Synchronisez : <code className="bg-muted px-1 rounded">npx cap sync</code></li>
+                <li>Lancez l'app : <code className="bg-muted px-1 rounded">npx cap run android</code> ou <code className="bg-muted px-1 rounded">npx cap run ios</code></li>
+              </ol>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid gap-6">
           <Card>
             <CardHeader>
@@ -148,9 +179,13 @@ export default function Scanner() {
               
               <div className="flex gap-2">
                 {!isScanning ? (
-                  <Button onClick={startScanner} className="w-full">
+                  <Button 
+                    onClick={startScanner} 
+                    className="w-full"
+                    disabled={!isNativePlatform}
+                  >
                     <Camera className="mr-2 h-4 w-4" />
-                    Démarrer le scanner
+                    {isNativePlatform ? "Démarrer le scanner" : "Scanner non disponible (web)"}
                   </Button>
                 ) : (
                   <Button onClick={() => stopScanner()} variant="destructive" className="w-full">
