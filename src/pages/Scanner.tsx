@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Html5Qrcode } from "html5-qrcode";
+import { BarcodeScanner } from "@capacitor-community/barcode-scanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -13,29 +13,41 @@ export default function Scanner() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isScanning, setIsScanning] = useState(false);
-  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
+
+  const checkPermission = async () => {
+    const status = await BarcodeScanner.checkPermission({ force: true });
+    return status.granted;
+  };
 
   const startScanner = async () => {
     try {
-      const qrCodeScanner = new Html5Qrcode("qr-reader");
-      setHtml5QrCode(qrCodeScanner);
+      const hasPermission = await checkPermission();
       
-      await qrCodeScanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        async (decodedText) => {
-          await handleBarcodeDetected(decodedText);
-          stopScanner(qrCodeScanner);
-        },
-        () => {
-          // Erreur normale pendant le scan
-        }
-      );
+      if (!hasPermission) {
+        toast({
+          title: "Permission refusée",
+          description: "L'accès à la caméra est requis pour scanner les codes-barres",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Préparer le scanner
+      await BarcodeScanner.prepare();
+      
+      // Masquer l'arrière-plan de l'application
+      document.body.classList.add("scanner-active");
       
       setIsScanning(true);
+
+      // Démarrer le scan
+      const result = await BarcodeScanner.startScan();
+      
+      if (result.hasContent) {
+        await handleBarcodeDetected(result.content || "");
+      }
+      
+      stopScanner();
     } catch (err) {
       console.error("Erreur lors du démarrage du scanner:", err);
       toast({
@@ -43,21 +55,14 @@ export default function Scanner() {
         description: "Impossible d'accéder à la caméra",
         variant: "destructive",
       });
+      stopScanner();
     }
   };
 
-  const stopScanner = async (scanner?: Html5Qrcode) => {
-    const scannerToStop = scanner || html5QrCode;
-    if (scannerToStop) {
-      try {
-        await scannerToStop.stop();
-        scannerToStop.clear();
-      } catch (err) {
-        console.error("Erreur lors de l'arrêt du scanner:", err);
-      }
-    }
+  const stopScanner = async () => {
+    document.body.classList.remove("scanner-active");
+    await BarcodeScanner.stopScan();
     setIsScanning(false);
-    setHtml5QrCode(null);
   };
 
   const handleBarcodeDetected = async (barcode: string) => {
@@ -130,25 +135,16 @@ export default function Scanner() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isScanning && (
-                <div className="relative w-full aspect-square max-w-md mx-auto bg-muted rounded-lg overflow-hidden">
-                  <div id="qr-reader" className="w-full h-full"></div>
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-4 border-2 border-primary rounded-lg"></div>
-                  </div>
+              <div className="relative w-full aspect-square max-w-md mx-auto bg-muted/50 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
+                <div className="text-center p-6">
+                  <Camera className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    {isScanning 
+                      ? "Positionnez le code-barres devant la caméra..." 
+                      : "Cliquez sur le bouton ci-dessous pour activer la caméra"}
+                  </p>
                 </div>
-              )}
-              
-              {!isScanning && (
-                <div className="relative w-full aspect-square max-w-md mx-auto bg-muted/50 rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-                  <div className="text-center p-6">
-                    <Camera className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Cliquez sur le bouton ci-dessous pour activer la caméra
-                    </p>
-                  </div>
-                </div>
-              )}
+              </div>
               
               <div className="flex gap-2">
                 {!isScanning ? (
