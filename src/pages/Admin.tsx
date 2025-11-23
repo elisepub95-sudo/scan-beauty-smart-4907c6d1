@@ -76,10 +76,10 @@ const Admin = () => {
     },
     {
       icon: Sparkles,
-      title: "Paramètres Diagnostics",
-      description: "Configurer les questions et résultats des diagnostics",
+      title: "Gestion des Diagnostics",
+      description: "Consulter et gérer tous les diagnostics effectués",
       gradient: "bg-accent",
-      comingSoon: true,
+      comingSoon: false,
     },
   ];
 
@@ -110,6 +110,7 @@ const Admin = () => {
                     if (index === 0) navigate("/admin/ingredients");
                     if (index === 1) navigate("/admin/routines");
                     if (index === 2) navigate("/admin/products");
+                    if (index === 3) navigate("/admin/diagnostics");
                   }
                 }}
                 className={`shadow-medium hover:shadow-strong transition-all duration-300 ${
