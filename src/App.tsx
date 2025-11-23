@@ -14,6 +14,8 @@ import IngredientDetail from "./pages/IngredientDetail";
 import Diagnostic from "./pages/Diagnostic";
 import SkinDiagnostic from "./pages/SkinDiagnostic";
 import SkinDiagnosticResults from "./pages/SkinDiagnosticResults";
+import HairDiagnostic from "./pages/HairDiagnostic";
+import HairDiagnosticResults from "./pages/HairDiagnosticResults";
 import Routine from "./pages/Routine";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -42,6 +44,8 @@ const App = () => (
           <Route path="/diagnostic" element={<Diagnostic />} />
           <Route path="/diagnostic/peau" element={<SkinDiagnostic />} />
           <Route path="/diagnostic/peau/resultats" element={<SkinDiagnosticResults />} />
+          <Route path="/diagnostic/cheveux" element={<HairDiagnostic />} />
+          <Route path="/diagnostic/cheveux/resultats" element={<HairDiagnosticResults />} />
           <Route path="/routine" element={<Routine />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
