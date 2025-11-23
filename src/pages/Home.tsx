@@ -79,28 +79,6 @@ const Home = () => {
           </p>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-12 max-w-3xl mx-auto">
-          <Card className="shadow-soft border-border/50 backdrop-blur-sm bg-card/95">
-            <CardContent className="pt-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-1">12K+</div>
-              <div className="text-sm text-muted-foreground">Ingrédients</div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-soft border-border/50 backdrop-blur-sm bg-card/95">
-            <CardContent className="pt-6 text-center">
-              <div className="text-3xl font-bold text-secondary mb-1">98%</div>
-              <div className="text-sm text-muted-foreground">Satisfaction</div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-soft border-border/50 backdrop-blur-sm bg-card/95">
-            <CardContent className="pt-6 text-center">
-              <div className="text-3xl font-bold text-accent mb-1">24/7</div>
-              <div className="text-sm text-muted-foreground">Disponible</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {features.map((feature, index) => (
@@ -126,43 +104,6 @@ const Home = () => {
           ))}
         </div>
 
-        {/* Benefits Section */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <Card className="shadow-medium border-border/50 backdrop-blur-sm bg-card/95">
-            <CardHeader className="text-center">
-              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-primary" />
-              <CardTitle className="text-2xl">Pourquoi choisir Scan & Know ?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-primary">🔬 Analyse scientifique</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Base de données complète avec classification détaillée des ingrédients
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-secondary">✨ Routines personnalisées</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Recommandations adaptées à votre type de peau et cheveux
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-accent">🛡️ Sécurité avant tout</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Identification des ingrédients à risque pour votre santé
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-primary">📊 Suivi complet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Historique de vos scans et évolution de votre routine
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );
