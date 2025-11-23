@@ -72,6 +72,7 @@ const Diagnostic = () => {
                     disabled={diagnostic.comingSoon}
                     onClick={() => {
                       if (index === 0) navigate("/diagnostic/peau");
+                      if (index === 1) navigate("/diagnostic/cheveux");
                     }}
                   >
                     {diagnostic.comingSoon ? "Bientôt disponible" : "Commencer"}
