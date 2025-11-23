@@ -1,1 +1,7 @@
 project_id = "ucdvyjcootisoroklbkd"
+
+[functions.analyze-hair-diagnostic]
+verify_jwt = false
+
+[functions.analyze-beauty-diagnostic]
+verify_jwt = false
