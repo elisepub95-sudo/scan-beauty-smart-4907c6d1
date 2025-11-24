@@ -3,9 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "/scan-beauty-smart-4907c6d1/",  // <-- IMPORTANT pour GitHub Pages
+  base: mode === "production" ? "/scan-beauty-smart-4907c6d1/" : "/", 
 
   server: {
     host: "::",
