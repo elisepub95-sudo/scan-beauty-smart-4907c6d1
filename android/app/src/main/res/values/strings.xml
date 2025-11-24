@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">scan-beauty-smart</string>
+    <string name="title_activity_main">scan-beauty-smart</string>
+    <string name="package_name">app.lovable.a6c8b0b1067c4a0e83e710906529be00</string>
+    <string name="custom_url_scheme">app.lovable.a6c8b0b1067c4a0e83e710906529be00</string>
+</resources>
